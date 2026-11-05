@@ -9,6 +9,24 @@ document.querySelector('.menu-btn')?.addEventListener('click', () => document.qu
 document.querySelectorAll('.mobile-nav a').forEach(a => a.addEventListener('click', () => document.querySelector('.mobile-nav')?.classList.remove('open')));
 document.querySelectorAll('[data-year]').forEach(el => el.textContent = new Date().getFullYear());
 
+// Privacy-safe lead journey events. These record intent, not contact details.
+(function trackLeadJourney(){
+  function track(name){
+    try { if (typeof window.clarity === 'function') window.clarity('event', name); } catch(_) {}
+  }
+  document.addEventListener('click', e => {
+    const link = e.target.closest('a[href]');
+    if (!link) return;
+    const href = link.getAttribute('href') || '';
+    if (href.startsWith('tel:')) track('lead_phone_click');
+    else if (href === '#estimate' || href === 'contact.html' || href === '/contact.html') track('lead_estimate_cta_click');
+  }, true);
+  document.querySelectorAll('form.lead-form').forEach(form => {
+    form.addEventListener('submit', () => track('lead_form_submit_attempt'), true);
+  });
+})();
+
+
 // Comrade Services virtual assistant — deterministic first version.
 // It answers only from approved business information and never invents pricing or project-specific promises.
 (function initComradeAssistant(){
@@ -94,7 +112,8 @@ document.querySelectorAll('[data-year]').forEach(el => el.textContent = new Date
   }
 
   function actions(){
-    return `<div class="ca-actions"><a class="ca-action primary" href="contact.html" data-ca="estimate">Free Estimate</a><a class="ca-action dark" href="tel:+12674428205" data-ca="call">Call Now</a></div>`;
+    const target = document.getElementById('estimate') ? '#estimate' : 'contact.html';
+    return `<div class="ca-actions"><a class="ca-action primary" href="${target}" data-ca="estimate">Free Estimate</a><a class="ca-action dark" href="tel:+12674428205" data-ca="call">Call Now</a></div>`;
   }
 
   function getAnswer(raw){
@@ -156,7 +175,7 @@ document.querySelectorAll('[data-year]').forEach(el => el.textContent = new Date
     setTimeout(()=>{
       typing.remove();
       addMessage(getAnswer(q),'bot',true);
-      body.querySelectorAll('[data-ca="estimate"]').forEach(a=>a.onclick=()=>clarityEvent('assistant_estimate_click'));
+      body.querySelectorAll('[data-ca="estimate"]').forEach(a=>a.onclick=()=>{ clarityEvent('assistant_estimate_click'); if (a.getAttribute('href') === '#estimate') closePanel(); });
       body.querySelectorAll('[data-ca="call"]').forEach(a=>a.onclick=()=>clarityEvent('assistant_call_click'));
     },260);
   }
